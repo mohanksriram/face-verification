@@ -37,13 +37,21 @@ pip install -r requirements.txt
 
 
 ## Load Dataset
+```
 python load_data.py
+```
 
 ## Generate Embeddings
+```
 python generate_embeddings.py
+```
 
 ## Train Classifier
+```
 python train_classifier.py
+```
 
 ## Perform Inference
+```
 python infer.py
+```
