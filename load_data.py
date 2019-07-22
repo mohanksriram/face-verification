@@ -10,13 +10,79 @@ from numpy import expand_dims
 from random import choice
 import numpy as np
 
-
+import os
 import mtcnn
 from mtcnn.mtcnn import MTCNN
 import face_recognition
+import cv2
+import time
+
+model_file = "opencv_face_detector_uint8.pb"
+config_file = "opencv_face_detector.pbtxt"
+dnn_weights_path = 'models'
+modelFile = os.path.join(dnn_weights_path, model_file)
+configFile = os.path.join(dnn_weights_path, config_file)
 
 
 DATA_PATH = Path("./data/custom")
+
+def get_face_locations(image):
+    blob = cv2.dnn.blobFromImage(image, 1.0, (300, 300), [104, 117, 123], False, False)
+    net = cv2.dnn.readNetFromTensorflow(modelFile, configFile)
+    net.setInput(blob)
+    detections = net.forward()
+    bboxes = []
+    frame_width = image.shape[1]
+    frame_height = image.shape[0]
+    for i in range(detections.shape[2]):
+        confidence = detections[0, 0, i, 2]
+        if confidence > 0.7:
+            x1 = int(detections[0, 0, i, 3] * frame_width)
+            y1 = int(detections[0, 0, i, 4] * frame_height)
+            x2 = int(detections[0, 0, i, 5] * frame_width)
+            y2 = int(detections[0, 0, i, 6] * frame_height)
+            
+            width = abs(x2 - x1)
+            height = abs(y2 - y1)
+            area = width * height
+
+            bboxes.append(([x1, y1, x2, y2], area))
+    #print(f'nomral bboxes: {bboxes}')
+    bboxes.sort(key=lambda x: x[1], reverse=True)
+    #print(f'sorted bboxes: {bboxes}')
+    return bboxes
+
+def extract_cv_face(image, required_size=(160, 160)):
+    start_time = time.time()
+    
+    image = np.array(image, dtype='uint8')
+    face_locations = get_face_locations(image)
+
+    end_time = time.time() - start_time
+    print('Time for dnn Detector: {}'.format(end_time))
+
+    if len(face_locations) > 0:
+
+        x1, y1, x2, y2 = face_locations[0][0]
+        face_rect = face_locations[0][0]
+        
+        full_pixels = image
+
+        # face = full_pixels[top:bottom, left:right]
+
+        face = full_pixels[y1:y2, x1:x2]
+
+
+        image = Image.fromarray(face)
+        image = image.resize(required_size)
+        face_array = asarray(image)
+
+
+    else:
+        return []
+    
+    return face_array
+
 
 # extract a single face from a given photograph
 def extract_face(filename, required_size=(160, 160)):
@@ -49,8 +115,10 @@ def load_faces(directory):
     for filename in listdir(directory):
         # path
         path = directory + filename
+
+        img = cv2.imread(path)
         # get face
-        face = extract_face(path)
+        face = extract_cv_face(img)
         # store
         faces.append(face)
     return faces
