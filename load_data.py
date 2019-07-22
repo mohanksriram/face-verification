@@ -8,10 +8,13 @@ from numpy import savez_compressed
 from numpy import load
 from numpy import expand_dims
 from random import choice
+import numpy as np
 
 
 import mtcnn
 from mtcnn.mtcnn import MTCNN
+import face_recognition
+
 
 DATA_PATH = Path("./data/custom")
 
@@ -22,20 +25,19 @@ def extract_face(filename, required_size=(160, 160)):
     # convert to RGB, if needed
     image = image.convert('RGB')
     # convert to array
-    pixels = asarray(image)
+    pixels = np.array(image)
     # create the detector, using default weights
-    detector = MTCNN()
-    # detect faces in the image
-    results = detector.detect_faces(pixels)
-    # extract the bounding box from the first face
-    x1, y1, width, height = results[0]['box']
-    # bug fix
-    x1, y1 = abs(x1), abs(y1)
-    x2, y2 = x1 + width, y1 + height
+    detector = face_recognition
+
+    face_locations = detector.face_locations(pixels, number_of_times_to_upsample=0, model="cnn")
+    top, right, bottom, left = face_locations[0]
+
     # extract the face
-    face = pixels[y1:y2, x1:x2]
+    face = pixels[top:bottom, left:right]
+
     # resize pixels to the model size
     image = Image.fromarray(face)
+
     image = image.resize(required_size)
     face_array = asarray(image)
     return face_array
@@ -80,9 +82,7 @@ def main():
     # Load the training dataset
     x_train, y_train = load_dataset(str(DATA_PATH) + '/train/')
     print(f'Loaded training data - x_shape: {x_train.shape}, y_shape: {y_train.shape}')
-    x_test, y_test = load_dataset(str(DATA_PATH) + '/val/')
-    print(f'Loaded test data - x_shape: {x_test.shape}, y_shape: {y_test.shape}')
-    savez_compressed('5-indian-celebrity-faces-dataset.npz', x_train, y_train, x_test, y_test)
+    savez_compressed('scientist-faces-dataset.npz', x_train, y_train)
     print('Data saved.')
 
 if __name__ == '__main__':

@@ -20,9 +20,9 @@ def get_embedding(model, face_pixels):
 
 def main():
     # load the face dataset
-    data = load('5-indian-celebrity-faces-dataset.npz')
-    trainX, trainy, testX, testy = data['arr_0'], data['arr_1'], data['arr_2'], data['arr_3']
-    print('Loaded: ', trainX.shape, trainy.shape, testX.shape, testy.shape)
+    data = load('scientist-faces-dataset.npz')
+    trainX, trainy = data['arr_0'], data['arr_1']
+    print('Loaded: ', trainX.shape, trainy.shape)
     # load the facenet model
     model = load_model('models/facenet_keras.h5')
     print('Loaded Model')
@@ -33,15 +33,8 @@ def main():
         newTrainX.append(embedding)
     newTrainX = asarray(newTrainX)
     print(newTrainX.shape)
-    # convert each face in the test set to an embedding
-    newTestX = list()
-    for face_pixels in testX:
-        embedding = get_embedding(model, face_pixels)
-        newTestX.append(embedding)
-    newTestX = asarray(newTestX)
-    print(newTestX.shape)
     # save arrays to one file in compressed format
-    savez_compressed('5-indian-celebrity-faces-embeddings.npz', newTrainX, trainy, newTestX, testy)
+    savez_compressed('scientist-faces-embeddings.npz', newTrainX, trainy)
 
 if __name__ == "__main__":
     main()
