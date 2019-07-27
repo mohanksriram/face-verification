@@ -16,6 +16,12 @@ from mtcnn.mtcnn import MTCNN
 import face_recognition
 import cv2
 import time
+from enum import Enum
+import matplotlib.pyplot as plt
+
+class EDetectorType(Enum):
+    MTCNN = 0
+    FACE_RECOGNITION = 1
 
 model_file = "opencv_face_detector_uint8.pb"
 config_file = "opencv_face_detector.pbtxt"
@@ -47,9 +53,7 @@ def get_face_locations(image):
             area = width * height
 
             bboxes.append(([x1, y1, x2, y2], area))
-    #print(f'nomral bboxes: {bboxes}')
     bboxes.sort(key=lambda x: x[1], reverse=True)
-    #print(f'sorted bboxes: {bboxes}')
     return bboxes
 
 def extract_cv_face(image, required_size=(160, 160)):
@@ -59,7 +63,7 @@ def extract_cv_face(image, required_size=(160, 160)):
     face_locations = get_face_locations(image)
 
     end_time = time.time() - start_time
-    print('Time for dnn Detector: {}'.format(end_time))
+    #print('Time for dnn Detector: {}'.format(end_time))
 
     if len(face_locations) > 0:
 
@@ -85,7 +89,7 @@ def extract_cv_face(image, required_size=(160, 160)):
 
 
 # extract a single face from a given photograph
-def extract_face(filename, required_size=(160, 160)):
+def extract_face(filename, required_size=(160, 160), det_type=EDetectorType.FACE_RECOGNITION):
     # load image from file
     image = Image.open(filename)
     # convert to RGB, if needed
@@ -93,13 +97,28 @@ def extract_face(filename, required_size=(160, 160)):
     # convert to array
     pixels = np.array(image)
     # create the detector, using default weights
-    detector = face_recognition
 
-    face_locations = detector.face_locations(pixels, number_of_times_to_upsample=0, model="cnn")
-    top, right, bottom, left = face_locations[0]
+    if det_type == EDetectorType.MTCNN:
+        detector = MTCNN()
+        # detect faces in the image
+        results = detector.detect_faces(pixels)
+        # extract the bounding box from the first face
+        x1, y1, width, height = results[0]['box']
+        # bug fix
+        x1, y1 = abs(x1), abs(y1)
+        x2, y2 = x1 + width, y1 + height
+        # extract the face
+        face = pixels[y1:y2, x1:x2]
+    
+    else:
+        print(f'loading face reg detector')
+        detector = face_recognition
 
-    # extract the face
-    face = pixels[top:bottom, left:right]
+        face_locations = detector.face_locations(pixels, number_of_times_to_upsample=0, model="cnn")
+        top, right, bottom, left = face_locations[0]
+
+        # extract the face
+        face = pixels[top:bottom, left:right]
 
     # resize pixels to the model size
     image = Image.fromarray(face)
@@ -115,12 +134,12 @@ def load_faces(directory):
     for filename in listdir(directory):
         # path
         path = directory + filename
-
         img = cv2.imread(path)
         # get face
         face = extract_cv_face(img)
         # store
         faces.append(face)
+        plt.imshow(face)
     return faces
 
 def load_dataset(directory):
@@ -150,8 +169,16 @@ def main():
     # Load the training dataset
     x_train, y_train = load_dataset(str(DATA_PATH) + '/train/')
     print(f'Loaded training data - x_shape: {x_train.shape}, y_shape: {y_train.shape}')
-    savez_compressed('scientist-faces-dataset.npz', x_train, y_train)
+
+    # load test dataset
+    x_test, y_test = load_dataset(str(DATA_PATH) + '/val/')
+    savez_compressed('scientist-faces-dataset.npz', x_train, y_train, x_test, y_test)
+    
     print('Data saved.')
+    print('showing data!')
+    plt.imshow(x_train[0])
+    plt.show()
+
 
 if __name__ == '__main__':
     main()

@@ -10,6 +10,8 @@ import pickle as p
 import numpy as np
 from scipy.stats import mode
 from sklearn.cluster import KMeans
+from sklearn.neighbors import KNeighborsClassifier
+import time
 
 def create_model(trainX, n_classes):
     # cluster feature vectors
@@ -17,92 +19,60 @@ def create_model(trainX, n_classes):
     model = kmeans
     return model
 
-def sim_predict(model, new_img_f, orig_classes, top_n=1, n_classes=5):
-    # cluster labels do not match with actual order of train data. so find indices to reorder cluster centres
-    kmeans = model
-    steps = np.linspace(0, len(kmeans.labels_), num=n_classes+1)
-    orig_labels = []
-    last_val = 0
-    for i in steps[1:]:
-        cluster_labels = kmeans.labels_[last_val:int(i)]
-        last_val = int(i)
-        orig_labels += [mode(cluster_labels)[0][0]]
+def gen_avg_embedding(trainX, trainy):
+    num_examples = len(list(set(trainy)))
+    all_embedding = [None]*num_examples
 
-    # new_map = {}
-    # for i, label in enumerate(encode_labels):
-    #     new_map[]
+    for idx, label in enumerate(trainy):
+        try:
+            all_embedding[label].append(trainX[idx])
+        except:
+            all_embedding[label] = [trainX[idx]]
 
+    avg_embedding = [np.average(ele, axis=0) for ele in all_embedding]
 
-    relabeled = kmeans.cluster_centers_[orig_labels]
-    sims = np.array([])
-    for i in range(relabeled.shape[0]):
-        sim = np.dot(relabeled[i],new_img_f)
-        sims = np.append(sims,sim)
-    sims_top_n = sims.argsort()[-top_n:][::-1]
-    classes = sims_top_n
+    return np.array(avg_embedding)
 
-    classes = [orig_classes[val] for val in classes]
-    
-    #print(f'new_classes: {classes}')
-    probs = sims[sims_top_n]
-    #print(f'classes: {classes}')
-    return classes, probs
+def distance(emb1, emb2):
+        return np.sum(np.square(emb1 - emb2))
+
+def get_most_similar(new_embeddings, avg_embeddings):
+    sims = []
+    for new_embedding in new_embeddings:
+        dists = [distance(new_embedding, emb2) for emb2 in avg_embeddings]
+        ans = np.argmin(dists)
+        sims.append(ans)
+    return sims
 
 def main():
     # load dataset
     data = load('scientist-faces-embeddings.npz')
-    trainX, trainy = data['arr_0'], data['arr_1']
+    trainX, trainy, testX, testy = data['arr_0'], data['arr_1'], data['arr_2'], data['arr_3']
     print(trainy)
     print('Dataset: train=%d' % (trainX.shape[0]))
     # normalize input vectors
     in_encoder = Normalizer(norm='l2')
     trainX = in_encoder.transform(trainX)
+    testX = in_encoder.transform(testX)
     # label encode targets
     out_encoder = LabelEncoder()
     out_encoder.fit(trainy)
-    numpy.save('models/svc_classes.npy', out_encoder.classes_)
-    
-    orig_classes = [x for i, x in enumerate(trainy) if i == list(trainy).index(x)]
-    with open("models/kmeans_classes.txt", "wb") as fp:   #Pickling
-        pickle.dump(orig_classes, fp)
+    numpy.save('models/classes.npy', out_encoder.classes_)
 
     trainy = out_encoder.transform(trainy)
+    testy = out_encoder.transform(testy)
 
-    print(f'transformed trainy = {trainy}')
-    
-    
-    # SVC model
-    model = SVC(kernel='linear', probability=True)
-    model.fit(trainX, trainy)
+    avg_embeddings = gen_avg_embedding(trainX, trainy)
+    numpy.save('models/avg_embeddings.npy', avg_embeddings)
 
-    # predict
-    yhat_train = model.predict(trainX)
-    # score
+    yhat_train = get_most_similar(trainX, avg_embeddings)
     score_train = accuracy_score(trainy, yhat_train)
+
+    yhat_test = get_most_similar(testX, avg_embeddings)
+    score_test = accuracy_score(testy, yhat_test)
+
     # summarize
-    print('SVC Model Accuracy: train=%.3f' % (score_train*100))
-
-    filename = 'models/svc_model.sav'
-    pickle.dump(model, open(filename, 'wb'))
-    print(f'saved svc model')
-
-    # Kmeans model
-    # testing the above methods
-    classifier_model = create_model(trainX, 5)
-
-    # save the model to disk
-    # predict
-    yhat_train =  [sim_predict(classifier_model, trainX[i], orig_classes,  1)[0][0] for i in range(trainX.shape[0])]
-    yhat_train = out_encoder.transform(yhat_train) 
-
-    # score
-    score_train = accuracy_score(trainy, yhat_train)
-    # summarize
-    print('Accuracy: train=%.3f' % (score_train*100))
-
-    filename = 'models/kmeans_model.sav'
-    pickle.dump(classifier_model, open(filename, 'wb'))
-    print('saved kmeans model')
+    print('Accuracy: train=%.3f, test=%.3f' % (score_train*100, score_test*100))
 
 if __name__ == "__main__":
     main()

@@ -10,46 +10,49 @@ import numpy
 import pickle as p
 import numpy as np
 from scipy.stats import mode
-from sklearn.cluster import KMeans
+
+def distance(emb1, emb2):
+        return np.sum(np.square(emb1 - emb2))
+
+def get_most_similar(new_embedding, avg_embeddings):
+    sims = []
+    dists = [distance(new_embedding, emb2) for emb2 in avg_embeddings]
+
+    print(f'smallest: {np.argmin(dists)}')
+    return np.argmin(dists)
 
 def main():
     # load faces
     data = load('scientist-faces-dataset.npz')
-    testX_faces = data['arr_0']
+    testX_faces = data['arr_2']
     # load face embeddings
-    data = load('scientist-faces-embeddings.npz')
-    trainX, trainy = data['arr_0'], data['arr_1']
-    # normalize input vectors
-    in_encoder = Normalizer(norm='l2')
-    trainX = in_encoder.transform(trainX)
-    # label encode targets
-    out_encoder = LabelEncoder()
-    out_encoder.fit(trainy)
-    numpy.save('classes.npy', out_encoder.classes_)
+    classes = np.load('models/classes.npy')
+    print(classes)
 
-    trainy = out_encoder.transform(trainy)
-    # fit model
-    model = SVC(kernel='linear', probability=True)
-    model.fit(trainX, trainy)
+    data = load('scientist-faces-embeddings.npz')
+    testX, testy = data['arr_2'], data['arr_3']
+    in_encoder = Normalizer(norm='l2')
+    testX = in_encoder.transform(testX)
+
+
     # test model on a random example from the test dataset
-    selection = choice([i for i in range(trainX.shape[0])])
+    selection = choice([i for i in range(testX.shape[0])])
+    print(selection)
     random_face_pixels = testX_faces[selection]
-    random_face_emb = trainX[selection]
-    random_face_class = trainy[selection]
-    random_face_name = out_encoder.inverse_transform([random_face_class])
-    # prediction for the face
-    samples = expand_dims(random_face_emb, axis=0)
-    yhat_class = model.predict(samples)
-    yhat_prob = model.predict_proba(samples)
-    # get name
-    class_index = yhat_class[0]
-    class_probability = yhat_prob[0,class_index] * 100
-    predict_names = out_encoder.inverse_transform(yhat_class)
-    print('Predicted: %s (%.3f)' % (predict_names[0], class_probability))
-    print('Expected: %s' % random_face_name[0])
-    # plot for funt
+    random_face_emb = testX[selection]
+    random_face_name = testy[selection]
+    
+    
+    # fit model
+    avg_embeddings = numpy.load('models/avg_embeddings.npy')
+
+    yhat_class = classes[get_most_similar(random_face_emb, avg_embeddings)]
+
+    print('Predicted: %s' % (yhat_class))
+    print('Expected: %s' % random_face_name)
+    # plot for fun
     pyplot.imshow(random_face_pixels)
-    title = '%s (%.3f)' % (predict_names[0], class_probability)
+    title = '%s' % (yhat_class)
     pyplot.title(title)
     pyplot.show()
 
