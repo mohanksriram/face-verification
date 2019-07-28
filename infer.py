@@ -23,13 +23,13 @@ def get_most_similar(new_embedding, avg_embeddings):
 
 def main():
     # load faces
-    data = load('scientist-faces-dataset.npz')
+    data = load('faces-dataset.npz')
     testX_faces = data['arr_2']
     # load face embeddings
     classes = np.load('models/classes.npy')
     print(classes)
 
-    data = load('scientist-faces-embeddings.npz')
+    data = load('faces-embeddings.npz')
     testX, testy = data['arr_2'], data['arr_3']
     in_encoder = Normalizer(norm='l2')
     testX = in_encoder.transform(testX)

@@ -18,7 +18,7 @@ git clone https://github.com/mohankumarSriram/face-verification.git
 
 Download facenet model [here](https://drive.google.com/open?id=1pwQ3H4aJ8a6yyJHZkTwtjcL4wYWQb7bn) and copy to the models folder
 
-Download Indian Celebrity Dataset [here](https://drive.google.com/open?id=1EfvaELfw9GrCKm9gythFTh8yUmfGSftV)
+Download toy dataset [here](https://drive.google.com/open?id=1EfvaELfw9GrCKm9gythFTh8yUmfGSftV)
 ```
 mkdir models
 cp ~/Downloads/facenet_keras.h5 models/

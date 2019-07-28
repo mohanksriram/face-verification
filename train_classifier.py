@@ -46,7 +46,7 @@ def get_most_similar(new_embeddings, avg_embeddings):
 
 def main():
     # load dataset
-    data = load('scientist-faces-embeddings.npz')
+    data = load('faces-embeddings.npz')
     trainX, trainy, testX, testy = data['arr_0'], data['arr_1'], data['arr_2'], data['arr_3']
     print(trainy)
     print('Dataset: train=%d' % (trainX.shape[0]))

@@ -172,7 +172,7 @@ def main():
 
     # load test dataset
     x_test, y_test = load_dataset(str(DATA_PATH) + '/val/')
-    savez_compressed('scientist-faces-dataset.npz', x_train, y_train, x_test, y_test)
+    savez_compressed('faces-dataset.npz', x_train, y_train, x_test, y_test)
     
     print('Data saved.')
     print('showing data!')
