@@ -1,6 +1,5 @@
 # face-verification
-Facial Verfication software based on Facenet
-
+Facial Verfication model training based on Facenet
 
 ## Setup
 
